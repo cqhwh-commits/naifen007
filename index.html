@@ -7,18 +7,26 @@
     <style>
         *{margin:0;padding:0;box-sizing:border-box;font-family: "Microsoft YaHei", sans-serif}
         body{background:#f5f7fa;padding:20px}
-        .container{max-width:900px;margin:0 auto}
-        .title{text-align:center;margin:20px 0;color:#2c8dfb;font-size:24px}
+        .container{max-width:1200px;margin:0 auto}
+        .title{text-align:center;margin:20px 0;color:#2c8dfb;font-size:26px}
         .subtitle{text-align:center;color:#666;margin-bottom:30px;font-size:16px}
-        .search-box{display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap}
-        #kw{flex:1;height:44px;padding:0 15px;border:1px solid #ddd;border-radius:8px;font-size:16px}
-        #searchBtn{padding:0 20px;background:#2c8dfb;color:white;border:0;border-radius:8px;cursor:pointer}
-        .filter-box{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
-        .filter-box select{height:40px;padding:0 10px;border:1px solid #ddd;border-radius:8px}
-        .item{background:white;padding:15px;margin-bottom:10px;border-radius:10px;box-shadow:0 2px 5px #00000010}
-        .item h3{color:#333;margin-bottom:5px}
-        .item p{color:#666;font-size:14px;line-height:1.5}
-        .tip{color:#999;text-align:center;margin-top:30px}
+        
+        .search-box{display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap;justify-content:center}
+        #kw{flex:1;min-width:200px;height:46px;padding:0 15px;border:1px solid #ddd;border-radius:8px;font-size:16px}
+        #searchBtn{padding:0 25px;background:#2c8dfb;color:white;border:0;border-radius:8px;font-size:16px;cursor:pointer}
+        
+        .filter-box{display:flex;gap:10px;margin-bottom:25px;flex-wrap:wrap;justify-content:center}
+        .filter-box select{height:42px;padding:0 12px;border:1px solid #ddd;border-radius:8px}
+        
+        .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-bottom:30px}
+        .card{background:white;padding:18px;border-radius:12px;box-shadow:0 2px 8px #00000008;border-left:4px solid #2c8dfb}
+        .card h3{font-size:16px;color:#333;margin-bottom:8px}
+        .card p{font-size:13px;color:#666;line-height:1.5;margin-bottom:4px}
+        
+        .empty{text-align:center;padding:40px;color:#999}
+        .page-box{text-align:center;margin:20px 0}
+        .page-btn{padding:8px 14px;margin:0 4px;border:1px solid #ddd;border-radius:6px;background:white;cursor:pointer}
+        .page-btn.active{background:#2c8dfb;color:white}
         .hide{display:none}
     </style>
 </head>
@@ -28,7 +36,7 @@
         <p class="subtitle">愿天下宝宝健康成长</p>
 
         <div class="search-box">
-            <input id="kw" placeholder="输入品牌/名称/段位，如：飞鹤、1段、羊奶粉">
+            <input id="kw" placeholder="输入品牌、名称、段位，例如：飞鹤、1段、羊奶粉">
             <button id="searchBtn">立即查询</button>
         </div>
 
@@ -49,80 +57,80 @@
         </div>
 
         <div id="result" class="hide"></div>
+        <div class="page-box" id="pageBox" style="display:none"></div>
     </div>
 
     <script>
         const DATA_URL = "https://raw.githubusercontent.com/cqhwh-commits/milk-data/refs/heads/main/milk.json";
-        let milkData = [];
+        let allData = [];
+        let currentList = [];
+        let pageSize = 9;
+        let currentPage = 1;
 
-        fetch(DATA_URL)
-            .then(res => res.json())
-            .then(data => {
-                milkData = data;
-            });
+        fetch(DATA_URL).then(res=>res.json()).then(data=>{ allData = data; });
 
         document.getElementById("searchBtn").onclick = function(){
             const kw = document.getElementById("kw").value.trim();
             const type = document.getElementById("typeFilter").value;
             const stage = document.getElementById("stageFilter").value;
-            
-            if(!kw){
-                alert("请输入关键词");
-                return;
-            }
 
-            let list = milkData.filter(item => 
-                (item.brand.includes(kw) || item.name.includes(kw) || item.stage.includes(kw)) &&
-                (type == "" || item.type == type) &&
-                (stage == "" || item.stage == stage)
-            );
+            if(!kw){ alert("请输入查询关键词"); return; }
 
-            let sameLevelList = [];
-            if(list.length > 0){
-                let first = list[0];
-                sameLevelList = milkData.filter(item => 
-                    item.stage == first.stage && 
-                    item.type == first.type && 
-                    item != first
-                ).slice(0, 5);
-            }
+            currentList = allData.filter(item=>{
+                let matchKey = item.brand.includes(kw) || item.name.includes(kw) || item.stage.includes(kw);
+                let matchType = type === "" || item.type === type;
+                let matchStage = stage === "" || item.stage === stage;
+                return matchKey && matchType && matchStage;
+            });
 
-            showResult(list, sameLevelList);
+            currentPage = 1;
+            renderPage();
+            renderList();
             document.getElementById("result").classList.remove("hide");
         }
 
-        function showResult(list, sameLevelList){
-            let html = "";
+        function renderList(){
+            const totalPage = Math.ceil(currentList.length / pageSize);
+            const start = (currentPage-1)*pageSize;
+            const end = start + pageSize;
+            const data = currentList.slice(start, end);
 
-            if(list.length > 0){
-                html += "<h3 style='margin:20px 0 10px'>🔍 查询结果</h3>";
-                list.forEach(item => {
-                    html += `
-                    <div class="item">
-                        <h3>${item.brand} ${item.name}</h3>
-                        <p>版本：${item.version} | 国标：${item.standard} | 段位：${item.stage}</p>
-                        <p>价格：${item.price}元 | 类型：${item.type} | 适合：${item.fit}</p>
-                        <p>配方：${item.formula}</p>
-                    </div>
-                    `;
-                });
-
-                if(sameLevelList.length > 0){
-                    html += "<h3 style='margin:30px 0 10px;color:#ff5722'>⭐ 同等级推荐奶粉</h3>";
-                    sameLevelList.forEach(item => {
-                        html += `
-                        <div class="item">
-                            <h3>${item.brand} ${item.name}</h3>
-                            <p>段位：${item.stage} | 类型：${item.type} | 价格：${item.price}元</p>
-                        </div>
-                        `;
-                    });
-                }
-            }else{
-                html = "<p style='text-align:center;padding:20px'>未找到相关奶粉</p>";
+            if(data.length === 0){
+                document.getElementById("result").innerHTML = `<div class="empty">未找到匹配的奶粉</div>`;
+                return;
             }
 
+            let html = `<div class="grid">`;
+            data.forEach(item=>{
+                html += `
+                <div class="card">
+                    <h3>${item.brand} ${item.name}</h3>
+                    <p>段位：${item.stage} | 类型：${item.type}</p>
+                    <p>价格：${item.price}元 | 国标：${item.standard}</p>
+                    <p>适合：${item.fit}</p>
+                </div>`;
+            });
+            html += `</div>`;
             document.getElementById("result").innerHTML = html;
+        }
+
+        function renderPage(){
+            const total = Math.ceil(currentList.length / pageSize);
+            const box = document.getElementById("pageBox");
+            if(total <= 1){ box.style.display = "none"; return; }
+            box.style.display = "block";
+
+            let html = "";
+            for(let i=1;i<=total;i++){
+                html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+            }
+            box.innerHTML = html;
+        }
+
+        function goPage(p){
+            currentPage = p;
+            renderList();
+            renderPage();
         }
     </script>
 </body>
