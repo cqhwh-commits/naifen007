@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>奶粉查询网 - naifen007.online</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
+        body{background:#f5f7fa;padding:20px}
+        .container{max-width:900px;margin:0 auto}
+        .title{text-align:center;margin:30px 0;color:#2c8dfb}
+        .search-box{display:flex;gap:10px;margin-bottom:30px}
+        #kw{flex:1;height:44px;padding:0 15px;border:1px solid #ddd;border-radius:8px;font-size:16px}
+        #searchBtn{padding:0 20px;background:#2c8dfb;color:white;border:0;border-radius:8px;cursor:pointer}
+        .item{background:white;padding:15px;margin-bottom:10px;border-radius:10px;box-shadow:0 2px 5px #00000010}
+        .item h3{color:#333;margin-bottom:5px}
+        .item p{color:#666;font-size:14px;line-height:1.5}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">奶粉信息查询库</h1>
+        <div class="search-box">
+            <input id="kw" placeholder="输入品牌/名称/段位，如：飞鹤、1段、羊奶粉">
+            <button id="searchBtn">查询</button>
+        </div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // 直接调用你的 GitHub 数仓
+        const DATA_URL = "https://raw.githubusercontent.com/cqhwh-commits/milk-data/refs/heads/main/milk.json";
+
+        // 加载数据
+        let milkData = [];
+        fetch(DATA_URL)
+            .then(res => res.json())
+            .then(data => {
+                milkData = data;
+                showList(milkData);
+            });
+
+        // 搜索
+        document.getElementById("searchBtn").onclick = function(){
+            const kw = document.getElementById("kw").value;
+            const filterData = milkData.filter(item => 
+                item.brand.includes(kw) || 
+                item.name.includes(kw) || 
+                item.stage.includes(kw) ||
+                item.type.includes(kw)
+            );
+            showList(filterData);
+        }
+
+        // 展示
+        function showList(list){
+            let html = "";
+            list.forEach(item => {
+                html += `
+                <div class="item">
+                    <h3>${item.brand} ${item.name}</h3>
+                    <p>版本：${item.version} | 国标：${item.standard} | 段位：${item.stage}</p>
+                    <p>价格：${item.price}元 | 类型：${item.type} | 适合：${item.fit}</p>
+                </div>
+                `;
+            });
+            document.getElementById("result").innerHTML = html || "<p>未找到数据</p>";
+        }
+    </script>
+</body>
+</html>
